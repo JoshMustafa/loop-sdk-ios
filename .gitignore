@@ -1,0 +1,30 @@
+# Swift Package Manager build output
+.build/
+.swiftpm/
+
+# Xcode
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+DerivedData/
+*.xcuserstate
+*.xcuserdatad
+
+# Generated bundles for Resources (Xcode places them under .build)
+Package.resolved
+
+# Resolved package cache (regenerated on `swift package resolve`)
+Packages/
+
+# Documentation
+docs/
+
+# Editor / tooling
+.vscode/
+.idea/
+
+# Claude Code working dir
+.claude/
+
+# OS junk
+.DS_Store
+Thumbs.db
