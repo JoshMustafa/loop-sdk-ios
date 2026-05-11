@@ -50,6 +50,7 @@ import LoopSDK
 @main
 struct YourApp: App {
     init() {
+        // That's the whole config. The backend URL is baked into the SDK.
         LoopSDK.start(apiKey: "loop_pk_yourapp_…")
     }
     // ...
