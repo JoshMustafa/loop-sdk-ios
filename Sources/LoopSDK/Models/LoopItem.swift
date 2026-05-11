@@ -107,3 +107,61 @@ public struct LoopItemPage: Codable, Sendable, Equatable {
     public let items: [LoopItem]
     public let nextCursor: String?
 }
+
+/// A single entry in an item's reply thread.
+public struct LoopReply: Codable, Sendable, Equatable, Identifiable {
+    public enum From: String, Codable, Sendable, Equatable {
+        case user
+        case dev
+    }
+
+    public let id: String
+    public let itemId: String
+    public let from: From
+    /// Anonymous reporter id when `from == .user`. Nil when `from == .dev`.
+    public let reporter: String?
+    /// Dev's display name when `from == .dev`. Nil when `from == .user`.
+    public let authorName: String?
+    public let body: String
+    public let votes: Int
+    public let my: VoteDir?
+    public let createdAt: Date
+    public let whenLabel: String
+}
+
+/// Anonymous device meta the original reporter's SDK attached on submit.
+public struct LoopItemMeta: Codable, Sendable, Equatable {
+    public let device: String?
+    public let os: String?
+    public let appVersion: String?
+    public let locale: String?
+    public let network: String?
+    public let sessionId: String?
+}
+
+/// Full detail response — the item plus its thread and the device meta the
+/// original reporter's SDK attached. Returned by `GET /api/ingest/items/:id`.
+public struct LoopItemDetail: Codable, Sendable, Equatable {
+    public let id: String
+    public let kind: LoopItem.Kind
+    public let status: LoopItem.Status
+    public let title: String
+    public let body: String
+    public let whenLabel: String
+    public let createdAt: Date
+    public let votes: Int
+    public let my: VoteDir?
+    public let replyCount: Int
+    public let thread: [LoopReply]
+    public let meta: LoopItemMeta?
+
+    /// Convenience getter for embedding the detail back into the list view.
+    public var asItem: LoopItem {
+        LoopItem(
+            id: id, kind: kind, status: status,
+            title: title, body: body,
+            whenLabel: whenLabel, createdAt: createdAt,
+            votes: votes, my: my, replyCount: replyCount
+        )
+    }
+}

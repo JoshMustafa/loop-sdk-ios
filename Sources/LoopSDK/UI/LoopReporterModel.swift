@@ -30,6 +30,10 @@ final class LoopReporterModel: ObservableObject {
 
     @Published var transientError: String?
 
+    // Detail-view state — populated when the user pushes into a row.
+    @Published var detail: LoopItemDetail?
+    @Published var detailState: LoadState = .idle
+
     let client: LoopClient
     let reporterId: String
     let sessionId: String
@@ -135,6 +139,108 @@ final class LoopReporterModel: ObservableObject {
         } catch {
             update(item: original, kind: kind)
             transientError = humanise(error)
+        }
+    }
+
+    // MARK: - Detail
+
+    /// Loads `LoopItemDetail` for the given `LP-####` id. The result is
+    /// published on `detail`; `detailState` reflects loading/error.
+    func loadDetail(for itemId: String) async {
+        detailState = .loading
+        do {
+            let item = try await client.fetchItem(itemId: itemId)
+            detail = item
+            detailState = .loaded
+        } catch {
+            detailState = .failed(humanise(error))
+        }
+    }
+
+    /// Casts a vote on the currently-loaded detail item. Optimistic, with
+    /// rollback on failure. Also syncs the matching list row so the inbox
+    /// stays consistent when you swipe back.
+    func voteOnDetail(dir: VoteDir?) async {
+        guard let original = detail else { return }
+        let delta = voteDelta(from: original.my, to: dir)
+
+        detail = LoopItemDetail(
+            id: original.id, kind: original.kind, status: original.status,
+            title: original.title, body: original.body,
+            whenLabel: original.whenLabel, createdAt: original.createdAt,
+            votes: original.votes + delta, my: dir, replyCount: original.replyCount,
+            thread: original.thread, meta: original.meta
+        )
+
+        do {
+            let result = try await client.vote(itemId: original.id, dir: dir)
+            let synced = LoopItemDetail(
+                id: original.id, kind: original.kind, status: original.status,
+                title: original.title, body: original.body,
+                whenLabel: original.whenLabel, createdAt: original.createdAt,
+                votes: result.votes, my: result.my, replyCount: original.replyCount,
+                thread: original.thread, meta: original.meta
+            )
+            detail = synced
+
+            // Also patch the corresponding list row.
+            let synced_list = LoopItem(
+                id: original.id, kind: original.kind, status: original.status,
+                title: original.title, body: original.body,
+                whenLabel: original.whenLabel, createdAt: original.createdAt,
+                votes: result.votes, my: result.my, replyCount: original.replyCount
+            )
+            update(item: synced_list, kind: original.kind)
+        } catch {
+            detail = original
+            transientError = humanise(error)
+        }
+    }
+
+    /// Posts a reply on the currently-loaded detail item. Pre-pends the
+    /// reply locally so the user sees it instantly; rolls back on failure.
+    func postReply(body: String) async {
+        guard let original = detail else { return }
+        let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+
+        do {
+            let reply = try await client.postReply(itemId: original.id, body: trimmed)
+            let withReply = LoopItemDetail(
+                id: original.id, kind: original.kind, status: original.status,
+                title: original.title, body: original.body,
+                whenLabel: original.whenLabel, createdAt: original.createdAt,
+                votes: original.votes, my: original.my,
+                replyCount: original.replyCount + 1,
+                thread: original.thread + [reply],
+                meta: original.meta
+            )
+            detail = withReply
+
+            // Bump the list row's replyCount too so the inbox count is fresh.
+            if let row = items(for: original.kind).first(where: { $0.id == original.id }) {
+                let bumped = LoopItem(
+                    id: row.id, kind: row.kind, status: row.status,
+                    title: row.title, body: row.body,
+                    whenLabel: row.whenLabel, createdAt: row.createdAt,
+                    votes: row.votes, my: row.my, replyCount: row.replyCount + 1
+                )
+                update(item: bumped, kind: row.kind)
+            }
+        } catch {
+            transientError = humanise(error)
+        }
+    }
+
+    private func voteDelta(from old: VoteDir?, to new: VoteDir?) -> Int {
+        switch (old, new) {
+        case (nil, .up?): return 1
+        case (nil, .down?): return -1
+        case (.up, nil): return -1
+        case (.down, nil): return 1
+        case (.up, .down?): return -2
+        case (.down, .up?): return 2
+        default: return 0
         }
     }
 

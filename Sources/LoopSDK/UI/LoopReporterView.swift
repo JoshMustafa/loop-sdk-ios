@@ -22,14 +22,20 @@ public struct LoopReporterView: View {
     }
 
     public var body: some View {
-        ZStack {
-            LoopColors.bg(dark: dark).ignoresSafeArea()
+        NavigationStack {
+            ZStack {
+                LoopColors.bg(dark: dark).ignoresSafeArea()
 
-            VStack(spacing: 0) {
-                header
-                titleBlock
-                tabs
-                content
+                VStack(spacing: 0) {
+                    header
+                    titleBlock
+                    tabs
+                    content
+                }
+            }
+            .navigationBarHidden(true)
+            .navigationDestination(for: String.self) { itemId in
+                LoopDetailView(model: model, itemId: itemId)
             }
         }
         .preferredColorScheme(.dark)  // Brutalist palette is designed dark-first
@@ -256,10 +262,13 @@ private struct LoopItemListView: View {
             ScrollView {
                 LazyVStack(spacing: 0) {
                     ForEach(Array(items.enumerated()), id: \.element.id) { idx, item in
-                        LoopItemRow(
-                            item: item,
-                            onVote: { dir in Task { await onVote(item, dir) } }
-                        )
+                        NavigationLink(value: item.id) {
+                            LoopItemRow(
+                                item: item,
+                                onVote: { dir in Task { await onVote(item, dir) } }
+                            )
+                        }
+                        .buttonStyle(.plain)
                         if idx < items.count - 1 {
                             Rectangle()
                                 .fill(LoopColors.separator(dark: dark))

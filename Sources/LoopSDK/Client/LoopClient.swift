@@ -71,6 +71,22 @@ public actor LoopClient {
         )
     }
 
+    public func fetchItem(itemId: String) async throws -> LoopItemDetail {
+        try await send(.getItem(itemId: itemId), decoding: LoopItemDetail.self)
+    }
+
+    public struct ReplyPayload: Codable, Sendable {
+        public let body: String
+    }
+
+    public func postReply(itemId: String, body: String) async throws -> LoopReply {
+        try await send(
+            .postReply(itemId: itemId),
+            body: ReplyPayload(body: body),
+            decoding: LoopReply.self
+        )
+    }
+
     public func submit(payload: SubmitPayload) async throws -> LoopSubmissionResult {
         try await send(.submit, body: payload, decoding: LoopSubmissionResult.self)
     }
