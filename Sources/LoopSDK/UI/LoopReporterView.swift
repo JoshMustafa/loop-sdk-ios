@@ -8,9 +8,17 @@ import UIKit
 public struct LoopReporterView: View {
     @StateObject private var model: LoopReporterModel
     @State private var kind: LoopItem.Kind = .bug
-    @State private var presentingCompose = false
-    @State private var initialComposeKind: LoopItem.Kind = .bug
+    /// Setting this presents the compose sheet pre-selected to the bound
+    /// kind. Using a single Identifiable trigger (instead of a Bool +
+    /// separate kind state) avoids the race where SwiftUI reads the cover
+    /// content closure before the kind state has actually applied.
+    @State private var composeRequest: ComposeRequest?
     @State private var submittedId: String?
+
+    private struct ComposeRequest: Identifiable {
+        let kind: LoopItem.Kind
+        var id: String { kind.rawValue }
+    }
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var scheme
@@ -40,9 +48,9 @@ public struct LoopReporterView: View {
         }
         .preferredColorScheme(.dark)  // Brutalist palette is designed dark-first
         .task { await model.bootstrap() }
-        .fullScreenCover(isPresented: $presentingCompose) {
-            LoopComposeSheet(model: model, initialKind: initialComposeKind) { result in
-                presentingCompose = false
+        .fullScreenCover(item: $composeRequest) { req in
+            LoopComposeSheet(model: model, initialKind: req.kind) { result in
+                composeRequest = nil
                 submittedId = result.id
             }
             .preferredColorScheme(.dark)
@@ -56,8 +64,9 @@ public struct LoopReporterView: View {
                 onSeeBoard: { submittedId = nil },
                 onFileAnother: {
                     submittedId = nil
+                    let next = kind
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-                        presentingCompose = true
+                        composeRequest = ComposeRequest(kind: next)
                     }
                 }
             )
@@ -93,8 +102,7 @@ public struct LoopReporterView: View {
             Spacer()
 
             Button(action: {
-                initialComposeKind = kind
-                presentingCompose = true
+                composeRequest = ComposeRequest(kind: kind)
             }) {
                 ZStack {
                     Circle().fill(LoopColors.ink(dark: dark))
@@ -194,8 +202,7 @@ public struct LoopReporterView: View {
                 onLoadMore: { await model.loadMoreBugs() },
                 onVote: { item, dir in await model.vote(item: item, dir: dir) },
                 onCompose: {
-                    initialComposeKind = .bug
-                    presentingCompose = true
+                    composeRequest = ComposeRequest(kind: .bug)
                 }
             )
         case .feature:
@@ -208,8 +215,7 @@ public struct LoopReporterView: View {
                 onLoadMore: { await model.loadMoreFeatures() },
                 onVote: { item, dir in await model.vote(item: item, dir: dir) },
                 onCompose: {
-                    initialComposeKind = .feature
-                    presentingCompose = true
+                    composeRequest = ComposeRequest(kind: .feature)
                 }
             )
         }
