@@ -7,12 +7,10 @@ public struct LoopConfiguration: Sendable {
     /// don't have to know or care where the Loop server lives — they
     /// just paste their `loop_pk_…` key and they're done.
     ///
-    /// Until the public production endpoint stands up, this points at
-    /// the local dev backend on the Mac's LAN IP (which the iOS
-    /// Simulator and any iPhone on the same Wi-Fi can reach). When
-    /// `https://api.loop.io` (or wherever) is live, change this and
-    /// re-tag.
-    public static let defaultBaseURL = URL(string: "http://192.168.1.115:4000")!
+    /// Production endpoint on Fly. Override per-test by passing a custom
+    /// `apiBase` to `LoopSDK.start(...)` if you need to point at a local
+    /// backend during development.
+    public static let defaultBaseURL = URL(string: "https://loop-backend.fly.dev")!
 
     public let apiKey: String
     public let apiBase: URL
