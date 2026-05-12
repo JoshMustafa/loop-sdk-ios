@@ -23,6 +23,12 @@ public struct LoopConfiguration: Sendable {
     /// report picks up the new state automatically, no callback the host
     /// has to remember to wire on every subscription event.
     ///
+    /// **Defaults to an auto-detector** (`AutoTier.resolve`) that
+    /// recognises RevenueCat via the Obj-C runtime when the host links
+    /// it. Pass an explicit closure to override, or pass
+    /// `tierProvider: nil` *explicitly via `init(..., tierProvider:)`*
+    /// to disable tier reporting entirely.
+    ///
     /// The closure runs on the SDK's submit task, so the read must be
     /// **cheap and non-blocking** — read a cached property, don't make
     /// a network round-trip.
@@ -32,10 +38,25 @@ public struct LoopConfiguration: Sendable {
     public let apiBase: URL
     public let tierProvider: TierProvider?
 
+    /// Default initialiser — uses the built-in auto-detector
+    /// (RevenueCat via Obj-C runtime; falls back to nil when nothing
+    /// recognises the host's subscription source).
+    public init(
+        apiKey: String,
+        apiBase: URL = LoopConfiguration.defaultBaseURL
+    ) {
+        self.apiKey = apiKey
+        self.apiBase = apiBase
+        self.tierProvider = { AutoTier.resolve() }
+    }
+
+    /// Override initialiser — host supplies its own closure (e.g. a
+    /// hand-rolled StoreKit 2 wrapper). Pass `nil` to opt out of
+    /// tier reporting entirely.
     public init(
         apiKey: String,
         apiBase: URL = LoopConfiguration.defaultBaseURL,
-        tierProvider: TierProvider? = nil
+        tierProvider: TierProvider?
     ) {
         self.apiKey = apiKey
         self.apiBase = apiBase

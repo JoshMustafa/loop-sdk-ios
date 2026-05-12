@@ -16,10 +16,21 @@ public enum LoopSDK {
 
     // MARK: - Public API
 
+    /// Minimal start — uses the built-in auto-tier detector (RevenueCat
+    /// today, more sources later). Recommended for most hosts.
+    public static func start(
+        apiKey: String,
+        apiBase: URL = LoopConfiguration.defaultBaseURL
+    ) {
+        Runtime.shared.configure(.init(apiKey: apiKey, apiBase: apiBase))
+    }
+
+    /// Start with a custom tier provider. Pass `nil` to disable tier
+    /// reporting entirely (auto-detect is bypassed).
     public static func start(
         apiKey: String,
         apiBase: URL = LoopConfiguration.defaultBaseURL,
-        tierProvider: LoopConfiguration.TierProvider? = nil
+        tierProvider: LoopConfiguration.TierProvider?
     ) {
         Runtime.shared.configure(.init(apiKey: apiKey, apiBase: apiBase, tierProvider: tierProvider))
     }

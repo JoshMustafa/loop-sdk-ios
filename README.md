@@ -77,29 +77,45 @@ That's it. Three lines of integration:
 2. `LoopReporterView()` in a `.fullScreenCover` (or `.sheet`, your call).
 3. (Optional) `LoopSDK.presentReporter(from:)` if you're driving from UIKit.
 
-### Optional: tag reports with the user's subscription tier
+### Tagging reports with the user's subscription tier
 
-Pass a `tierProvider` closure to `start(...)` and every report submitted
-from then on carries the host's current view of the user's tier
-(`paid`, `free`, `trial`, `pro`, `founder` — whatever string you want).
-The dev sees it as a coloured pill on the dashboard next to the report,
-which is handy for prioritising paying customers' bugs.
+Every report can carry an optional `user.tier` string that the dev
+dashboard renders as a coloured pill — handy for prioritising paying
+customers' bugs. The dashboard's pill is `Paid` / `Trial` / `Free` (with
+specific colours) for the canonical values, or whatever string you pass
+for custom tiers like `pro`, `founder`, `team`.
+
+**If your app uses RevenueCat, you get this for free.** The single-line
+`LoopSDK.start(apiKey:)` above already wires it up — the SDK auto-
+detects RevenueCat via the Objective-C runtime (no build-time
+dependency on RevenueCat, so apps that don't use it pay nothing) and
+emits `"paid"` whenever the user has any active entitlement, `"free"`
+otherwise.
+
+**To override** (custom value space, StoreKit, your own backend), pass
+a closure:
 
 ```swift
 LoopSDK.start(apiKey: "loop_pk_yourapp_…") {
-    // RevenueCat example — any synchronous source of truth works.
+    // Any synchronous source of truth works.
     Purchases.shared.cachedCustomerInfo?
-        .entitlements.active.keys.contains("pro") == true ? "paid" : "free"
+        .entitlements.active.keys.contains("pro") == true ? "pro" : "free"
 }
+```
+
+**To disable tier reporting entirely**, pass `nil`:
+
+```swift
+LoopSDK.start(apiKey: "loop_pk_yourapp_…", tierProvider: nil)
 ```
 
 Notes:
 
-- The SDK reads the closure **on every submit**, so a downgrade or
-  refund picks up automatically — no setter to remember to call.
-- The closure runs on the SDK's submit task, so the read must be
-  **cheap and non-blocking** (a cached property, not a network round-
-  trip).
+- The SDK reads the closure (or the auto-detector) **on every submit**,
+  so a downgrade or refund picks up automatically — no setter to
+  remember to call.
+- The read must be **cheap and non-blocking** (a cached property, not a
+  network round-trip).
 - Returning `nil`, an empty string, or whitespace is treated as
   "tier unknown" — the report is filed with no tier attached.
 - **End-users never see the tier** in the report sheet. It's
