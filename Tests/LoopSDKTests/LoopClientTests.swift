@@ -128,6 +128,57 @@ final class LoopClientTests: XCTestCase {
         XCTAssertEqual(json?["dir"] as? String, "up")
     }
 
+    func test_submit_payload_includes_user_tier_when_set() async throws {
+        var capturedBody: Data?
+
+        let session = MockURLProtocol.install { req in
+            capturedBody = req.httpBodyStreamData()
+            return (.with(status: 201), Data(#"{"id":"LP-1","kind":"bug","status":"open","title":"x","body":"y","whenLabel":"now","createdAt":"2026-05-10T12:00:00Z","votes":0,"my":null,"replyCount":0}"#.utf8))
+        }
+
+        let client = LoopClient(baseURL: baseURL, apiKey: apiKey, reporterId: reporterId, session: session)
+        let payload = LoopClient.SubmitPayload(
+            type: "bug",
+            title: "Crash",
+            body: "It crashes",
+            reporter_id: reporterId,
+            device_meta: LoopClient.DeviceMetaPayload(device: "iPhone", os: "iOS 18", appVersion: "1.0", locale: "en", network: "WiFi", sessionId: "sess_x"),
+            user: LoopClient.UserPayload(tier: "paid")
+        )
+        _ = try await client.submit(payload: payload)
+
+        let json = try JSONSerialization.jsonObject(with: capturedBody ?? Data()) as? [String: Any]
+        let user = json?["user"] as? [String: Any]
+        XCTAssertEqual(user?["tier"] as? String, "paid")
+    }
+
+    func test_submit_payload_omits_user_tier_when_nil() async throws {
+        var capturedBody: Data?
+
+        let session = MockURLProtocol.install { req in
+            capturedBody = req.httpBodyStreamData()
+            return (.with(status: 201), Data(#"{"id":"LP-1","kind":"bug","status":"open","title":"x","body":"y","whenLabel":"now","createdAt":"2026-05-10T12:00:00Z","votes":0,"my":null,"replyCount":0}"#.utf8))
+        }
+
+        let client = LoopClient(baseURL: baseURL, apiKey: apiKey, reporterId: reporterId, session: session)
+        let payload = LoopClient.SubmitPayload(
+            type: "bug",
+            title: "Crash",
+            body: "It crashes",
+            reporter_id: reporterId,
+            device_meta: LoopClient.DeviceMetaPayload(device: "iPhone", os: "iOS 18", appVersion: "1.0", locale: "en", network: "WiFi", sessionId: "sess_x"),
+            user: nil
+        )
+        _ = try await client.submit(payload: payload)
+
+        // The Phoenix ingest treats absent `user` and `user.tier == nil`
+        // identically (both store NULL). We send `user` as JSON null rather
+        // than omitting the key entirely — it's the simpler Codable shape
+        // and the backend treats them the same.
+        let json = try JSONSerialization.jsonObject(with: capturedBody ?? Data()) as? [String: Any]
+        XCTAssertTrue(json?["user"] is NSNull || json?["user"] == nil)
+    }
+
     func test_unknown_status_value_decodes_as_other() throws {
         let json = """
         {

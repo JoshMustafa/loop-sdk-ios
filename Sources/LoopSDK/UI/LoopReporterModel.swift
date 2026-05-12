@@ -37,11 +37,18 @@ final class LoopReporterModel: ObservableObject {
     let client: LoopClient
     let reporterId: String
     let sessionId: String
+    let tierProvider: LoopConfiguration.TierProvider?
 
-    init(client: LoopClient, reporterId: String, sessionId: String) {
+    init(
+        client: LoopClient,
+        reporterId: String,
+        sessionId: String,
+        tierProvider: LoopConfiguration.TierProvider? = nil
+    ) {
         self.client = client
         self.reporterId = reporterId
         self.sessionId = sessionId
+        self.tierProvider = tierProvider
     }
 
     func bootstrap() async {
@@ -250,6 +257,10 @@ final class LoopReporterModel: ObservableObject {
         let trimmedBody = body.trimmingCharacters(in: .whitespacesAndNewlines)
 
         let device = DeviceMeta.capture(sessionId: sessionId)
+        // Resolved fresh on every submit so a downgrade (paid → free)
+        // shows up on the next report without the host having to call
+        // any setter. nil when the host didn't configure a tierProvider.
+        let resolvedTier = LoopConfiguration.resolveTier(from: tierProvider)
         let payload = LoopClient.SubmitPayload(
             type: kind.rawValue,
             title: trimmedTitle,
@@ -262,7 +273,8 @@ final class LoopReporterModel: ObservableObject {
                 locale: device.locale,
                 network: device.network,
                 sessionId: device.sessionId
-            )
+            ),
+            user: resolvedTier.map { LoopClient.UserPayload(tier: $0) }
         )
 
         let result = try await client.submit(payload: payload)

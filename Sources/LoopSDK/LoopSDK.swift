@@ -16,8 +16,12 @@ public enum LoopSDK {
 
     // MARK: - Public API
 
-    public static func start(apiKey: String, apiBase: URL = LoopConfiguration.defaultBaseURL) {
-        Runtime.shared.configure(.init(apiKey: apiKey, apiBase: apiBase))
+    public static func start(
+        apiKey: String,
+        apiBase: URL = LoopConfiguration.defaultBaseURL,
+        tierProvider: LoopConfiguration.TierProvider? = nil
+    ) {
+        Runtime.shared.configure(.init(apiKey: apiKey, apiBase: apiBase, tierProvider: tierProvider))
     }
 
     public static func start(configuration: LoopConfiguration) {
@@ -89,7 +93,8 @@ public enum LoopSDK {
             return LoopReporterModel(
                 client: client,
                 reporterId: reporterId,
-                sessionId: sessionId
+                sessionId: sessionId,
+                tierProvider: cfg.tierProvider
             )
         }
         #endif

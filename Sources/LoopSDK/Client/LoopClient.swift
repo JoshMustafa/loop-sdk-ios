@@ -17,6 +17,25 @@ public actor LoopClient {
         public let body: String
         public let reporter_id: String
         public let device_meta: DeviceMetaPayload
+        // Optional dev-set business context. Phoenix's ingest treats absent
+        // and explicit-null identically — both store NULL on `user_tier`.
+        public let user: UserPayload?
+
+        public init(
+            type: String,
+            title: String,
+            body: String,
+            reporter_id: String,
+            device_meta: DeviceMetaPayload,
+            user: UserPayload? = nil
+        ) {
+            self.type = type
+            self.title = title
+            self.body = body
+            self.reporter_id = reporter_id
+            self.device_meta = device_meta
+            self.user = user
+        }
     }
 
     public struct DeviceMetaPayload: Codable, Sendable {
@@ -26,6 +45,23 @@ public actor LoopClient {
         public let locale: String
         public let network: String
         public let sessionId: String
+
+        public init(device: String, os: String, appVersion: String, locale: String, network: String, sessionId: String) {
+            self.device = device
+            self.os = os
+            self.appVersion = appVersion
+            self.locale = locale
+            self.network = network
+            self.sessionId = sessionId
+        }
+    }
+
+    public struct UserPayload: Codable, Sendable {
+        public let tier: String?
+
+        public init(tier: String?) {
+            self.tier = tier
+        }
     }
 
     private let baseURL: URL

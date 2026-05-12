@@ -77,6 +77,34 @@ That's it. Three lines of integration:
 2. `LoopReporterView()` in a `.fullScreenCover` (or `.sheet`, your call).
 3. (Optional) `LoopSDK.presentReporter(from:)` if you're driving from UIKit.
 
+### Optional: tag reports with the user's subscription tier
+
+Pass a `tierProvider` closure to `start(...)` and every report submitted
+from then on carries the host's current view of the user's tier
+(`paid`, `free`, `trial`, `pro`, `founder` — whatever string you want).
+The dev sees it as a coloured pill on the dashboard next to the report,
+which is handy for prioritising paying customers' bugs.
+
+```swift
+LoopSDK.start(apiKey: "loop_pk_yourapp_…") {
+    // RevenueCat example — any synchronous source of truth works.
+    Purchases.shared.cachedCustomerInfo?
+        .entitlements.active.keys.contains("pro") == true ? "paid" : "free"
+}
+```
+
+Notes:
+
+- The SDK reads the closure **on every submit**, so a downgrade or
+  refund picks up automatically — no setter to remember to call.
+- The closure runs on the SDK's submit task, so the read must be
+  **cheap and non-blocking** (a cached property, not a network round-
+  trip).
+- Returning `nil`, an empty string, or whitespace is treated as
+  "tier unknown" — the report is filed with no tier attached.
+- **End-users never see the tier** in the report sheet. It's
+  dev-only metadata, only visible on the dashboard.
+
 ## What the user sees
 
 - A list of every bug and feature filed against the project, segmented Bugs / Features.

@@ -12,11 +12,43 @@ public struct LoopConfiguration: Sendable {
     /// backend during development.
     public static let defaultBaseURL = URL(string: "https://loop-backend.fly.dev")!
 
+    /// Optional. Called by the SDK right before each report is submitted
+    /// to read the host app's current subscription / business tier for
+    /// that user. Whatever string the closure returns is attached to the
+    /// ingest payload under `user.tier`; the dev sees it as a pill on
+    /// the dashboard.
+    ///
+    /// Read-on-submit instead of a sticky setter so the value can never
+    /// go stale — if a user downgrades from "paid" to "free" the next
+    /// report picks up the new state automatically, no callback the host
+    /// has to remember to wire on every subscription event.
+    ///
+    /// The closure runs on the SDK's submit task, so the read must be
+    /// **cheap and non-blocking** — read a cached property, don't make
+    /// a network round-trip.
+    public typealias TierProvider = @Sendable () -> String?
+
     public let apiKey: String
     public let apiBase: URL
+    public let tierProvider: TierProvider?
 
-    public init(apiKey: String, apiBase: URL = LoopConfiguration.defaultBaseURL) {
+    public init(
+        apiKey: String,
+        apiBase: URL = LoopConfiguration.defaultBaseURL,
+        tierProvider: TierProvider? = nil
+    ) {
         self.apiKey = apiKey
         self.apiBase = apiBase
+        self.tierProvider = tierProvider
+    }
+
+    /// Runs the configured `tierProvider` (if any), trims, and treats
+    /// empty / whitespace-only strings as nil. Pure function — exposed
+    /// so tests can exercise the normalisation without standing up the
+    /// whole SDK runtime.
+    public static func resolveTier(from provider: TierProvider?) -> String? {
+        guard let raw = provider?() else { return nil }
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 }
