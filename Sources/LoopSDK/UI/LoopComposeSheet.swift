@@ -73,14 +73,17 @@ struct LoopComposeSheet: View {
     // MARK: - Header (Cancel · NEW BUG · Send →)
 
     private var header: some View {
-        HStack(alignment: .center) {
+        let kindTitle = kind == .bug
+            ? String(localized: "New bug", bundle: .module)
+            : String(localized: "New feature", bundle: .module)
+        return HStack(alignment: .center) {
             Button(action: { dismiss() }) {
-                Text("Cancel")
+                Text("Cancel", bundle: .module)
                     .font(LoopFont.sf(15, .regular))
                     .foregroundStyle(LoopColors.textSecondary(dark: dark))
             }
             Spacer()
-            MonoCaps(text: "New \(kind == .bug ? "bug" : "feature")", size: 11, kerning: 1.2)
+            MonoCaps(text: kindTitle, size: 11, kerning: 1.2)
             Spacer()
             Button {
                 Task { await submit() }
@@ -91,7 +94,7 @@ struct LoopComposeSheet: View {
                             .controlSize(.mini)
                             .tint(LoopColors.onInk(dark: dark))
                     } else {
-                        Text("Send →")
+                        Text("Send →", bundle: .module)
                             .font(LoopFont.sf(13, .semibold))
                             .kerning(-0.15)
                             .foregroundStyle(LoopColors.onInk(dark: dark))
@@ -116,8 +119,16 @@ struct LoopComposeSheet: View {
 
     private var kindCards: some View {
         HStack(spacing: 10) {
-            kindCard(.bug, label: "Bug", sub: "Something is broken")
-            kindCard(.feature, label: "Feature", sub: "I'd like this added")
+            kindCard(
+                .bug,
+                label: String(localized: "Bug", bundle: .module),
+                sub: String(localized: "Something is broken", bundle: .module)
+            )
+            kindCard(
+                .feature,
+                label: String(localized: "Feature", bundle: .module),
+                sub: String(localized: "I'd like this added", bundle: .module)
+            )
         }
         .padding(.bottom, 22)
     }
@@ -161,12 +172,15 @@ struct LoopComposeSheet: View {
 
     private var titleField: some View {
         VStack(alignment: .leading, spacing: 8) {
-            MonoCaps(text: "Title")
+            MonoCaps(text: String(localized: "Title", bundle: .module))
             TextField(
                 "",
                 text: $title,
-                prompt: Text(kind == .bug ? "What broke?" : "What would help?")
-                    .foregroundColor(LoopColors.textTertiary(dark: dark))
+                prompt: Text(
+                    kind == .bug ? "What broke?" : "What would help?",
+                    bundle: .module
+                )
+                .foregroundColor(LoopColors.textTertiary(dark: dark))
             )
             .focused($titleFocus)
             .textInputAutocapitalization(.sentences)
@@ -199,16 +213,18 @@ struct LoopComposeSheet: View {
     @ViewBuilder
     private var titleHint: some View {
         if titleEmpty {
-            Text("REQUIRED")
+            Text("Required", bundle: .module)
                 .font(LoopFont.mono(10.5, .medium))
                 .kerning(0.6)
+                .textCase(.uppercase)
                 .foregroundStyle(LoopColors.textTertiary(dark: dark))
                 .padding(.horizontal, 4)
         } else if titleApproachingMax {
             let atMax = title.count >= Self.maxTitleChars
-            Text("\(title.count) / \(Self.maxTitleChars) CHARACTERS")
+            Text("\(title.count) / \(Self.maxTitleChars) characters", bundle: .module)
                 .font(LoopFont.mono(10.5, .medium))
                 .kerning(0.6)
+                .textCase(.uppercase)
                 .foregroundStyle(atMax
                     ? LoopColors.downvote
                     : LoopColors.statusInProgress)  // amber as a warning
@@ -220,7 +236,7 @@ struct LoopComposeSheet: View {
 
     private var bodyField: some View {
         VStack(alignment: .leading, spacing: 8) {
-            MonoCaps(text: "Description")
+            MonoCaps(text: String(localized: "Description", bundle: .module))
             ZStack(alignment: .topLeading) {
                 TextEditor(text: $bodyText)
                     .font(LoopFont.sf(15))
@@ -231,7 +247,7 @@ struct LoopComposeSheet: View {
                     .frame(minHeight: 140, alignment: .topLeading)
 
                 if bodyText.isEmpty {
-                    Text("Steps to reproduce, what you expected, what actually happened…")
+                    Text("Steps to reproduce, what you expected, what actually happened…", bundle: .module)
                         .font(LoopFont.sf(15))
                         .foregroundStyle(LoopColors.textTertiary(dark: dark))
                         .lineSpacing(2)
@@ -253,6 +269,7 @@ struct LoopComposeSheet: View {
 
     /// Live character-count hint shown directly under the description.
     /// Idle (empty) → tertiary text. Started but under → red. Met → green.
+    @ViewBuilder
     private var bodyHint: some View {
         let count = trimmedBodyCount
         let met = bodyMeetsMinimum
@@ -264,17 +281,19 @@ struct LoopComposeSheet: View {
             return LoopColors.downvote
         }()
 
-        let label: String = {
-            if met { return "✓ \(count) characters" }
-            return "\(count) / \(Self.minBodyChars) characters minimum"
-        }()
-
-        return Text(label.uppercased())
-            .font(LoopFont.mono(10.5, .medium))
-            .kerning(0.6)
-            .foregroundStyle(color)
-            .padding(.top, 8)
-            .padding(.horizontal, 4)
+        Group {
+            if met {
+                Text("✓ \(count) characters", bundle: .module)
+            } else {
+                Text("\(count) / \(Self.minBodyChars) characters minimum", bundle: .module)
+            }
+        }
+        .font(LoopFont.mono(10.5, .medium))
+        .kerning(0.6)
+        .textCase(.uppercase)
+        .foregroundStyle(color)
+        .padding(.top, 8)
+        .padding(.horizontal, 4)
     }
 
     // MARK: - Auto-capture disclosure
@@ -283,25 +302,17 @@ struct LoopComposeSheet: View {
         HStack(alignment: .top, spacing: 10) {
             ZStack {
                 Circle().fill(LoopColors.subtleFill(dark: dark))
-                Text("i")
+                Text(verbatim: "i")
                     .font(LoopFont.mono(12, .bold))
                     .foregroundStyle(LoopColors.text(dark: dark))
             }
             .frame(width: 22, height: 22)
 
-            (
-                Text("We attach ")
-                + Text("device").font(LoopFont.mono(12.5)).foregroundColor(LoopColors.text(dark: dark))
-                + Text(", ")
-                + Text("os").font(LoopFont.mono(12.5)).foregroundColor(LoopColors.text(dark: dark))
-                + Text(", ")
-                + Text("app version").font(LoopFont.mono(12.5)).foregroundColor(LoopColors.text(dark: dark))
-                + Text(" and a session id automatically. No personal info is sent.")
-            )
-            .font(LoopFont.sf(12.5))
-            .kerning(-0.08)
-            .foregroundStyle(LoopColors.textSecondary(dark: dark))
-            .lineSpacing(2)
+            Text(disclosureAttributedText)
+                .font(LoopFont.sf(12.5))
+                .kerning(-0.08)
+                .foregroundStyle(LoopColors.textSecondary(dark: dark))
+                .lineSpacing(2)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
@@ -309,6 +320,29 @@ struct LoopComposeSheet: View {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .stroke(LoopColors.separator(dark: dark), style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
         )
+    }
+
+    /// Auto-capture disclosure rendered from a single localized markdown
+    /// string. Backtick-delimited spans (e.g. `` `device` ``) become inline
+    /// monospaced runs styled in the primary text colour — translators can
+    /// reorder or rename the keywords as long as the backticks stay.
+    private var disclosureAttributedText: AttributedString {
+        let source = String(
+            localized: "We attach `device`, `os`, `app version` and a session id automatically. No personal info is sent.",
+            bundle: .module
+        )
+        guard var attr = try? AttributedString(markdown: source) else {
+            return AttributedString(source)
+        }
+        let codeFont = LoopFont.mono(12.5)
+        let codeColor = LoopColors.text(dark: dark)
+        for run in attr.runs {
+            if run.inlinePresentationIntent?.contains(.code) == true {
+                attr[run.range].font = codeFont
+                attr[run.range].foregroundColor = codeColor
+            }
+        }
+        return attr
     }
 
     private func errorBanner(_ text: String) -> some View {
@@ -334,13 +368,20 @@ struct LoopComposeSheet: View {
 
     private func displayMessage(for error: LoopError) -> String {
         switch error {
-        case .invalidApiKey: return "Loop SDK isn't configured correctly."
-        case .badRequest(let m): return m ?? "That didn't go through. Try again."
-        case .notFound: return "Couldn't reach Loop."
-        case .serverError: return "Loop is having trouble — try again in a moment."
-        case .transport: return "Network problem. Check your connection."
-        case .decoding: return "Got an unexpected response from Loop."
-        case .unknown: return "Something went wrong."
+        case .invalidApiKey:
+            return String(localized: "Loop SDK isn't configured correctly.", bundle: .module)
+        case .badRequest(let m):
+            return m ?? String(localized: "That didn't go through. Try again.", bundle: .module)
+        case .notFound:
+            return String(localized: "Couldn't reach Loop.", bundle: .module)
+        case .serverError:
+            return String(localized: "Loop is having trouble — try again in a moment.", bundle: .module)
+        case .transport:
+            return String(localized: "Network problem. Check your connection.", bundle: .module)
+        case .decoding:
+            return String(localized: "Got an unexpected response from Loop.", bundle: .module)
+        case .unknown:
+            return String(localized: "Something went wrong.", bundle: .module)
         }
     }
 }

@@ -33,13 +33,15 @@ struct LoopItemRow: View {
 
                 // when · replies
                 HStack(spacing: 14) {
-                    Text("\(item.whenLabel) AGO")
+                    Text("\(item.whenLabel) ago", bundle: .module)
                         .font(LoopFont.mono(10.5, .medium))
                         .kerning(0.4)
+                        .textCase(.uppercase)
                     if item.replyCount > 0 {
-                        Text("\(item.replyCount) \(item.replyCount == 1 ? "REPLY" : "REPLIES")")
+                        Text("\(item.replyCount) replies", bundle: .module)
                             .font(LoopFont.mono(10.5, .medium))
                             .kerning(0.4)
+                            .textCase(.uppercase)
                     }
                 }
                 .foregroundStyle(LoopColors.textTertiary(dark: dark))

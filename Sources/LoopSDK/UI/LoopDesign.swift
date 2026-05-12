@@ -95,14 +95,14 @@ struct LoopStatusLabel: View {
 
     private var label: String {
         switch status {
-        case .open: return "OPEN"
-        case .planned: return "PLANNED"
-        case .inProgress: return "IN PROGRESS"
-        case .triaged: return "TRIAGED"
-        case .resolved: return "RESOLVED"
-        case .shipped: return "SHIPPED"
-        case .wontFix: return "WON'T FIX"
-        case .other(let raw): return raw.uppercased()
+        case .open: return String(localized: "Open", bundle: .module)
+        case .planned: return String(localized: "Planned", bundle: .module)
+        case .inProgress: return String(localized: "In progress", bundle: .module)
+        case .triaged: return String(localized: "Triaged", bundle: .module)
+        case .resolved: return String(localized: "Resolved", bundle: .module)
+        case .shipped: return String(localized: "Shipped", bundle: .module)
+        case .wontFix: return String(localized: "Won't fix", bundle: .module)
+        case .other(let raw): return raw
         }
     }
 
@@ -114,6 +114,7 @@ struct LoopStatusLabel: View {
             Text(label)
                 .font(LoopFont.mono(10, .medium))
                 .kerning(0.5)
+                .textCase(.uppercase)
                 .foregroundStyle(color)
         }
     }
@@ -129,17 +130,20 @@ struct LoopKindTag: View {
 
     var body: some View {
         let prefix = kind == .bug ? "×" : "+"
-        let label = kind == .bug ? "BUG" : "FEATURE"
+        let label = kind == .bug
+            ? String(localized: "Bug", bundle: .module)
+            : String(localized: "Feature", bundle: .module)
         let fg = kind == .bug ? LoopColors.text(dark: dark).opacity(0.85) : LoopColors.textSecondary(dark: dark)
         let border = kind == .bug
             ? (dark ? Color.white.opacity(0.18) : Color.black.opacity(0.16))
             : (dark ? Color.white.opacity(0.12) : Color.black.opacity(0.10))
 
         HStack(spacing: 4) {
-            Text(prefix).font(LoopFont.mono(10.5, .medium))
+            Text(verbatim: prefix).font(LoopFont.mono(10.5, .medium))
             Text(label)
                 .font(LoopFont.mono(10.5, .medium))
                 .kerning(0.4)
+                .textCase(.uppercase)
         }
         .foregroundStyle(fg)
         .padding(.horizontal, 7)

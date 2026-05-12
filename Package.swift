@@ -16,7 +16,8 @@ let package = Package(
             name: "LoopSDK",
             path: "Sources/LoopSDK",
             resources: [
-                .process("PrivacyInfo.xcprivacy")
+                .process("PrivacyInfo.xcprivacy"),
+                .process("Resources/Localizable.xcstrings")
             ]
         ),
         .testTarget(

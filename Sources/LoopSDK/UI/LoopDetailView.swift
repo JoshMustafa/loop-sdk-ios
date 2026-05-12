@@ -55,7 +55,7 @@ struct LoopDetailView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 14, weight: .heavy))
-                    Text("Back")
+                    Text("Back", bundle: .module)
                         .font(LoopFont.sf(15, .regular))
                         .kerning(-0.2)
                 }
@@ -68,7 +68,7 @@ struct LoopDetailView: View {
             HStack(spacing: 6) {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 14, weight: .heavy))
-                Text("Back").font(LoopFont.sf(15))
+                Text("Back", bundle: .module).font(LoopFont.sf(15))
             }
             .opacity(0)
         }
@@ -130,10 +130,14 @@ struct LoopDetailView: View {
         HStack(spacing: 14) {
             voteButton(direction: .up, current: detail.my)
             VStack(alignment: .leading, spacing: 2) {
-                Text("\(detail.votes)")
+                Text(verbatim: "\(detail.votes)")
                     .font(LoopFont.sf(22, .bold).monospacedDigit())
                     .foregroundStyle(LoopColors.text(dark: dark))
-                MonoCaps(text: "Net votes", size: 10.5, kerning: 0.6)
+                MonoCaps(
+                    text: String(localized: "Net votes", bundle: .module),
+                    size: 10.5,
+                    kerning: 0.6
+                )
             }
             Spacer()
             voteButton(direction: .down, current: detail.my)
@@ -170,21 +174,23 @@ struct LoopDetailView: View {
                 )
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(direction == .up ? "Vote up" : "Vote down")
+        .accessibilityLabel(
+            Text(direction == .up ? "Vote up" : "Vote down", bundle: .module)
+        )
     }
 
     // MARK: - Auto-captured meta
 
     private func metaStrip(_ meta: LoopItemMeta) -> some View {
         let rows: [(String, String?)] = [
-            ("Device", meta.device),
-            ("iOS", meta.os?.replacingOccurrences(of: "iOS ", with: "")),
-            ("App", meta.appVersion),
-            ("Session", meta.sessionId.map { String($0.prefix(10)) + "…" })
+            (String(localized: "Device", bundle: .module), meta.device),
+            (String(localized: "iOS", bundle: .module), meta.os?.replacingOccurrences(of: "iOS ", with: "")),
+            (String(localized: "App", bundle: .module), meta.appVersion),
+            (String(localized: "Session", bundle: .module), meta.sessionId.map { String($0.prefix(10)) + "…" })
         ]
 
         return VStack(alignment: .leading, spacing: 10) {
-            MonoCaps(text: "Auto-captured")
+            MonoCaps(text: String(localized: "Auto-captured", bundle: .module))
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 1), GridItem(.flexible(), spacing: 1)], spacing: 1) {
                 ForEach(rows, id: \.0) { row in
                     VStack(alignment: .leading, spacing: 4) {
@@ -214,9 +220,14 @@ struct LoopDetailView: View {
 
     private func threadSection(_ detail: LoopItemDetail) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            MonoCaps(text: "Thread · \(detail.replyCount)")
+            MonoCaps(
+                text: String(
+                    localized: "Thread · \(detail.replyCount)",
+                    bundle: .module
+                )
+            )
             if detail.thread.isEmpty {
-                Text("Be the first to reply.")
+                Text("Be the first to reply.", bundle: .module)
                     .font(LoopFont.sf(13))
                     .foregroundStyle(LoopColors.textTertiary(dark: dark))
                     .padding(.vertical, 4)
@@ -231,8 +242,14 @@ struct LoopDetailView: View {
     private func threadEntry(_ reply: LoopReply, projectName: String?) -> some View {
         let isDev = reply.from == .dev
         let label: String = {
-            if isDev { return reply.authorName ?? (projectName.map { "\($0) team" } ?? "Team") }
-            return "Anonymous"
+            if isDev {
+                if let author = reply.authorName { return author }
+                if let project = projectName {
+                    return String(localized: "\(project) team", bundle: .module)
+                }
+                return String(localized: "Team", bundle: .module)
+            }
+            return String(localized: "Anonymous", bundle: .module)
         }()
 
         return VStack(alignment: .leading, spacing: 8) {
@@ -278,7 +295,7 @@ struct LoopDetailView: View {
             TextField(
                 "",
                 text: $replyText,
-                prompt: Text("Add a reply…")
+                prompt: Text("Add a reply…", bundle: .module)
                     .foregroundColor(LoopColors.textTertiary(dark: dark))
             )
             .focused($replyFocus)
@@ -330,7 +347,7 @@ struct LoopDetailView: View {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 26, weight: .light))
                 .foregroundStyle(LoopColors.textSecondary(dark: dark))
-            Text("Couldn't load")
+            Text("Couldn't load", bundle: .module)
                 .font(LoopFont.sf(18, .semibold))
                 .foregroundStyle(LoopColors.text(dark: dark))
             Text(message)
@@ -338,8 +355,10 @@ struct LoopDetailView: View {
                 .foregroundStyle(LoopColors.textSecondary(dark: dark))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
-            Button("Try again") {
+            Button {
                 Task { await model.loadDetail(for: itemId) }
+            } label: {
+                Text("Try again", bundle: .module)
             }
             .font(LoopFont.sf(14, .semibold))
             .foregroundStyle(LoopColors.onInk(dark: dark))

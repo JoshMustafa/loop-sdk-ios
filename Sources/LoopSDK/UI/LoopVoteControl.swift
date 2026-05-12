@@ -24,7 +24,7 @@ struct LoopVoteControl: View {
     var body: some View {
         VStack(spacing: 0) {
             chevron(direction: .up, color: upColor, system: "chevron.up")
-            Text("\(votes)")
+            Text(verbatim: "\(votes)")
                 .font(LoopFont.sf(15, .semibold).monospacedDigit())
                 .foregroundStyle(LoopColors.text(dark: dark))
             chevron(direction: .down, color: downColor, system: "chevron.down")
@@ -45,7 +45,9 @@ struct LoopVoteControl: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(direction == .up ? "Vote up" : "Vote down")
+        .accessibilityLabel(
+            Text(direction == .up ? "Vote up" : "Vote down", bundle: .module)
+        )
     }
 }
 #endif

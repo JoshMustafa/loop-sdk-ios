@@ -72,8 +72,13 @@ public struct LoopReporterView: View {
             )
             .preferredColorScheme(.dark)
         }
-        .alert("Loop", isPresented: errorPresented) {
-            Button("OK", role: .cancel) { model.transientError = nil }
+        .alert(
+            Text("Loop", bundle: .module),
+            isPresented: errorPresented
+        ) {
+            Button(role: .cancel) { model.transientError = nil } label: {
+                Text("OK", bundle: .module)
+            }
         } message: {
             Text(model.transientError ?? "")
         }
@@ -84,9 +89,14 @@ public struct LoopReporterView: View {
     // MARK: - Header
 
     private var header: some View {
-        HStack(alignment: .center) {
+        let projectName = model.project?.name ?? String(localized: "Loop", bundle: .module)
+        let headerTitle = String(
+            localized: "\(projectName) · Feedback",
+            bundle: .module
+        )
+        return HStack(alignment: .center) {
             Button(action: { dismiss() }) {
-                Text("Close")
+                Text("Close", bundle: .module)
                     .font(LoopFont.sf(15, .regular))
                     .kerning(-0.2)
                     .foregroundStyle(LoopColors.textSecondary(dark: dark))
@@ -94,10 +104,7 @@ public struct LoopReporterView: View {
 
             Spacer()
 
-            MonoCaps(
-                text: "\(model.project?.name ?? "Loop") · Feedback",
-                size: 11, kerning: 1.2
-            )
+            MonoCaps(text: headerTitle, size: 11, kerning: 1.2)
 
             Spacer()
 
@@ -112,7 +119,7 @@ public struct LoopReporterView: View {
                 }
                 .frame(width: 34, height: 34)
             }
-            .accessibilityLabel("New report")
+            .accessibilityLabel(Text("New report", bundle: .module))
         }
         .padding(.horizontal, 20)
         .padding(.top, 4)
@@ -123,13 +130,20 @@ public struct LoopReporterView: View {
 
     private var titleBlock: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(kind == .bug ? "BUGS" : "FEATURES")
+            Text(kind == .bug ? "Bugs" : "Features", bundle: .module)
                 .font(LoopFont.sf(38, .heavy))
                 .kerning(-1.4)
+                .textCase(.uppercase)
                 .foregroundStyle(LoopColors.text(dark: dark))
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
-            MonoCaps(text: "\(currentCount) reports · sorted by votes", kerning: 0.6)
+            MonoCaps(
+                text: String(
+                    localized: "\(currentCount) reports · sorted by votes",
+                    bundle: .module
+                ),
+                kerning: 0.6
+            )
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 20)
@@ -145,8 +159,16 @@ public struct LoopReporterView: View {
 
     private var tabs: some View {
         HStack(spacing: 18) {
-            tab(.bug, label: "Bugs", count: model.bugs.count)
-            tab(.feature, label: "Features", count: model.features.count)
+            tab(
+                .bug,
+                label: String(localized: "Bugs", bundle: .module),
+                count: model.bugs.count
+            )
+            tab(
+                .feature,
+                label: String(localized: "Features", bundle: .module),
+                count: model.features.count
+            )
             Spacer()
         }
         .padding(.horizontal, 20)
@@ -170,7 +192,7 @@ public struct LoopReporterView: View {
                     .foregroundStyle(active
                         ? LoopColors.text(dark: dark)
                         : LoopColors.textSecondary(dark: dark))
-                Text("\(count)")
+                Text(verbatim: "\(count)")
                     .font(LoopFont.mono(11, .regular).monospacedDigit())
                     .foregroundStyle(active
                         ? LoopColors.text(dark: dark)
@@ -321,12 +343,12 @@ private struct LoopEmptyPanel: View {
             .frame(width: 64, height: 64)
 
             VStack(spacing: 8) {
-                Text("Nothing reported yet")
+                Text("Nothing reported yet", bundle: .module)
                     .font(LoopFont.sf(22, .bold))
                     .kerning(-0.5)
                     .foregroundStyle(LoopColors.text(dark: dark))
                     .multilineTextAlignment(.center)
-                Text("Hit something odd, or got an idea? Be the first to log it — the team gets it instantly.")
+                Text("Hit something odd, or got an idea? Be the first to log it — the team gets it instantly.", bundle: .module)
                     .font(LoopFont.sf(14))
                     .kerning(-0.15)
                     .foregroundStyle(LoopColors.textSecondary(dark: dark))
@@ -336,7 +358,7 @@ private struct LoopEmptyPanel: View {
             }
 
             Button(action: onCompose) {
-                Text(kind == .bug ? "File a bug" : "File a feature request")
+                Text(kind == .bug ? "File a bug" : "File a feature request", bundle: .module)
                     .font(LoopFont.sf(15, .semibold))
                     .kerning(-0.2)
                     .foregroundStyle(LoopColors.onInk(dark: dark))
@@ -365,7 +387,7 @@ private struct LoopErrorPanel: View {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 28, weight: .light))
                 .foregroundStyle(LoopColors.textSecondary(dark: dark))
-            Text("Couldn't load")
+            Text("Couldn't load", bundle: .module)
                 .font(LoopFont.sf(18, .semibold))
                 .foregroundStyle(LoopColors.text(dark: dark))
             Text(message)
@@ -373,7 +395,9 @@ private struct LoopErrorPanel: View {
                 .foregroundStyle(LoopColors.textSecondary(dark: dark))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
-            Button("Try again") { Task { await retry() } }
+            Button { Task { await retry() } } label: {
+                Text("Try again", bundle: .module)
+            }
                 .font(LoopFont.sf(14, .semibold))
                 .foregroundStyle(LoopColors.onInk(dark: dark))
                 .padding(.horizontal, 18)
