@@ -24,10 +24,14 @@ struct LoopComposeSheet: View {
     init(
         model: LoopReporterModel,
         initialKind: LoopItem.Kind = .bug,
+        initialTitle: String = "",
+        initialBody: String = "",
         onSubmitted: @escaping (LoopSubmissionResult) -> Void
     ) {
         self.model = model
         _kind = State(initialValue: initialKind)
+        _title = State(initialValue: initialTitle)
+        _bodyText = State(initialValue: initialBody)
         self.onSubmitted = onSubmitted
     }
 
