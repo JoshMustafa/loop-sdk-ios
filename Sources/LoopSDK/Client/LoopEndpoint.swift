@@ -9,11 +9,12 @@ enum LoopEndpoint: Sendable {
     case vote(itemId: String)
     case postReply(itemId: String)
     case submit
+    case captureEvent
 
     var method: String {
         switch self {
         case .getProject, .listBugs, .listFeatures, .getItem: return "GET"
-        case .vote, .postReply, .submit: return "POST"
+        case .vote, .postReply, .submit, .captureEvent: return "POST"
         }
     }
 
@@ -54,6 +55,7 @@ enum LoopEndpoint: Sendable {
         case .vote(let itemId): return "/api/ingest/items/\(itemId)/vote"
         case .postReply(let itemId): return "/api/ingest/items/\(itemId)/replies"
         case .submit: return "/api/ingest/submissions"
+        case .captureEvent: return "/api/ingest/events"
         }
     }
 }

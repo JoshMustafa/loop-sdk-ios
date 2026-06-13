@@ -46,6 +46,51 @@ public enum LoopSDK {
         Runtime.shared.reporterId
     }
 
+    // MARK: - Automatic diagnostics
+
+    /// Records a breadcrumb into the in-memory ring buffer (last 20 kept).
+    /// Cheap and non-blocking; safe to call before `start()`. The buffer is
+    /// snapshotted into the next `captureDiagnostic` payload.
+    ///
+    /// - Parameters:
+    ///   - message: Short developer-supplied description of what happened.
+    ///   - fail: Mark this crumb as a failure step (default `false`).
+    public static func breadcrumb(_ message: String, fail: Bool = false) {
+        Runtime.shared.breadcrumb(message, fail: fail)
+    }
+
+    /// Captures a diagnostic event and sends it to the Loop backend.
+    ///
+    /// Fire-and-forget: returns immediately, sends asynchronously, never
+    /// throws. Repeat captures of the same `name` arriving faster than the
+    /// rate-limit interval are dropped. If the send fails (offline / non-2xx)
+    /// the payload is buffered on disk and retried on the next capture.
+    ///
+    /// No-ops silently if `start()` hasn't been called (no configuration to
+    /// authenticate with) — it won't crash the host.
+    ///
+    /// - Parameters:
+    ///   - name: Stable fingerprint that groups occurrences of the same issue.
+    ///   - severity: `.info`, `.warning`, or `.error` (default `.error`).
+    ///   - title: Optional human-readable title.
+    ///   - culprit: Optional location/function blamed for the event.
+    ///   - context: Optional developer-supplied key/value strings.
+    public static func captureDiagnostic(
+        _ name: String,
+        severity: Severity = .error,
+        title: String? = nil,
+        culprit: String? = nil,
+        context: [String: String] = [:]
+    ) {
+        Runtime.shared.captureDiagnostic(
+            name,
+            severity: severity,
+            title: title,
+            culprit: culprit,
+            context: context
+        )
+    }
+
     #if canImport(UIKit)
     /// UIKit convenience: presents `LoopReporterView` modally from the
     /// supplied view controller.
@@ -69,6 +114,14 @@ public enum LoopSDK {
         private let lock = NSLock()
         private var configuration: LoopConfiguration?
         private let store = ReporterStore()
+
+        /// Always-available breadcrumb buffer — usable before `start()`.
+        private let breadcrumbs = BreadcrumbBuffer()
+        /// On-disk offline buffer for diagnostics that fail to POST.
+        private let diagnosticsStore = OfflineBufferStore.makeDefault()
+        /// Lazily built once configuration is available; rebuilt is
+        /// unnecessary because apiKey/base don't change after start().
+        private var diagnosticsEngine: DiagnosticsEngine?
         private(set) lazy var sessionId: String = {
             let raw = UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()
             return "sess_" + String(raw.prefix(12))
@@ -79,6 +132,57 @@ public enum LoopSDK {
             lock.lock()
             self.configuration = configuration
             lock.unlock()
+        }
+
+        // MARK: - Diagnostics
+
+        func breadcrumb(_ message: String, fail: Bool) {
+            breadcrumbs.record(message: message, fail: fail)
+        }
+
+        /// Fire-and-forget. No-ops (apart from breadcrumb retention) when no
+        /// configuration is present; otherwise dispatches an async capture
+        /// that never throws back to the caller.
+        func captureDiagnostic(
+            _ name: String,
+            severity: Severity,
+            title: String?,
+            culprit: String?,
+            context: [String: String]
+        ) {
+            guard let engine = diagnosticsEngineIfConfigured() else { return }
+            Task.detached {
+                try? await engine.capture(
+                    name,
+                    severity: severity,
+                    title: title,
+                    culprit: culprit,
+                    context: context
+                )
+            }
+        }
+
+        /// Returns the engine, building it on first use, but only if the host
+        /// has called `start()`. Returns `nil` (rather than fatal-ing like
+        /// `currentConfiguration()`) so diagnostics stay non-fatal.
+        private func diagnosticsEngineIfConfigured() -> DiagnosticsEngine? {
+            lock.lock(); defer { lock.unlock() }
+            guard let configuration else { return nil }
+            if let diagnosticsEngine { return diagnosticsEngine }
+            let client = LoopClient(
+                baseURL: configuration.apiBase,
+                apiKey: configuration.apiKey,
+                reporterId: reporterId
+            )
+            let engine = DiagnosticsEngine(
+                client: client,
+                sessionId: sessionId,
+                tierProvider: configuration.tierProvider,
+                store: diagnosticsStore,
+                buffer: breadcrumbs
+            )
+            diagnosticsEngine = engine
+            return engine
         }
 
         /// Returns the configured value or fatals if the host forgot to

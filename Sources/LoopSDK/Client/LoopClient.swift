@@ -127,6 +127,22 @@ public actor LoopClient {
         try await send(.submit, body: payload, decoding: LoopSubmissionResult.self)
     }
 
+    /// Fire-and-forget POST of a pre-serialized diagnostic event body to
+    /// `/api/ingest/events`. The body is built upstream with
+    /// `JSONSerialization` (the payload carries arbitrary developer-supplied
+    /// `context` / `breadcrumbs` maps, so we don't model it with Codable).
+    /// Throws on transport failure or any non-2xx status so the caller can
+    /// decide to buffer offline and retry.
+    public func sendDiagnostic(body: Data) async throws {
+        var request = try LoopEndpoint.captureEvent.buildRequest(
+            baseURL: baseURL,
+            apiKey: apiKey,
+            reporterId: reporterId
+        )
+        request.httpBody = body
+        try await executeNoContent(request)
+    }
+
     // MARK: - Internal
 
     private func send<T: Decodable & Sendable>(
@@ -154,6 +170,32 @@ public actor LoopClient {
         let encoder = JSONEncoder()
         request.httpBody = try encoder.encode(body)
         return try await execute(request, decoding: decoding)
+    }
+
+    /// Like `execute(_:decoding:)` but discards the body — used for the
+    /// fire-and-forget diagnostic ingest, which returns an empty 2xx.
+    private func executeNoContent(_ request: URLRequest) async throws {
+        let response: URLResponse
+        do {
+            (_, response) = try await session.data(for: request)
+        } catch let error as URLError {
+            throw LoopError.transport(error.code)
+        }
+
+        guard let http = response as? HTTPURLResponse else {
+            throw LoopError.unknown(status: -1)
+        }
+
+        switch http.statusCode {
+        case 200..<300:
+            return
+        case 401, 403:
+            throw LoopError.invalidApiKey
+        case 400..<500:
+            throw LoopError.unknown(status: http.statusCode)
+        default:
+            throw LoopError.serverError(status: http.statusCode)
+        }
     }
 
     private func execute<T: Decodable & Sendable>(
